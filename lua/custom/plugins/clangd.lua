@@ -1,7 +1,7 @@
 return {
   {
     'p00f/clangd_extensions.nvim',
-    lazy_load = true,
+    lazy = true,
     ft = { 'c', 'cpp' },
     config = function() end,
     opts = {
@@ -30,12 +30,15 @@ return {
       },
     },
   },
+  '--offset-encoding=utf-16',
+
   {
     'neovim/nvim-lspconfig',
     opts = {
       servers = {
         -- Ensure mason installs the server
         clangd = {
+
           keys = {
             { '<leader>cR', '<cmd>ClangdSwitchSourceHeader<cr>', desc = 'Switch Source/Header (C/C++)' },
           },
@@ -62,6 +65,7 @@ return {
             '--header-insertion=iwyu',
             '--completion-style=detailed',
             '--function-arg-placeholders',
+            '--offset-encoding=utf-16',
             '--fallback-style=llvm',
           },
           init_options = {
