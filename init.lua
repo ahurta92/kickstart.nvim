@@ -419,12 +419,12 @@ require('lazy').setup({
         builtin.find_files { cwd = vim.fn.stdpath 'config' }
       end, { desc = '[S]earch [N]eovim files' })
 
-      vim.keymap.set('n', '<leader>sm', function()
-        builtin.find_files { cwd = '/mnt/data/madness_data/' }
+      vim.keymap.set('n', '<leader>sq', function()
+        builtin.find_files { cwd = '~/dev/qca' }
       end, { desc = '[S]earch [M]adness Data files' })
 
       vim.keymap.set('n', '<leader>sv', function()
-        builtin.find_files { cwd = '~/projects/development/development_notes/' }
+        builtin.find_files { cwd = '~/Documents/Notes/Notes' }
       end, { desc = '[S]earch [V]ault files' })
     end,
   },
@@ -683,7 +683,7 @@ require('lazy').setup({
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = false, cpp = false }
+        local disable_filetypes = { c = false, cpp = true }
         return {
           timeout_ms = 500,
           lsp_fallback = not disable_filetypes[vim.bo[bufnr].filetype],
@@ -879,7 +879,7 @@ require('lazy').setup({
     build = ':TSUpdate',
     opts = {
 
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc','cpp' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'vim', 'vimdoc', 'cpp' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
