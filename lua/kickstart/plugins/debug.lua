@@ -64,6 +64,35 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
+        'cpptools',
+      },
+    }
+
+    dap.adapters.gdb = {
+      type = 'executable',
+      command = 'gdb',
+      args = { '-i', 'dap' },
+    }
+    dap.configurations.cpp = {
+      {
+        name = 'Launch',
+        type = 'gdb',
+        request = 'launch',
+        program = function()
+          return vim.fn.input 'Path to executable: '
+        end,
+        cwd = '${workspaceFolder}',
+        stopOnEntry = false,
+        args = {},
+        runInTerminal = false,
+      },
+      {
+        name = 'Test madqc managers',
+        type = 'gdb',
+        request = 'launch',
+        program = '/home/ahurta92/Projects/madness/build/src/apps/madqc/test_managers',
+        cwd = '/home/ahurta92/dev/devtest/madqc',
+        stopOnEntry = false,
       },
     }
 
