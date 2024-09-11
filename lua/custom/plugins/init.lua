@@ -20,7 +20,22 @@ return {
     'github/copilot.vim',
     'fladson/vim-kitty',
     'tpope/vim-fugitive',
+
     enabled = true,
+  },
+  {
+    'tpope/vim-dispatch',
+    -- Create a custom BuildMadqc command
+    vim.api.nvim_create_user_command('BuildMadqc', function()
+      -- save all first first
+      vim.cmd 'wa'
+      vim.cmd '  Dispatch cmake --build build --target madqc -- -j'
+    end, {}),
+
+    vim.api.nvim_create_user_command('BuildTestManager', function()
+      vim.cmd 'wa'
+      vim.cmd 'Dispatch cmake --build build --target test_managers -- -j'
+    end, {}),
   },
   {
     'christoomey/vim-tmux-navigator',
