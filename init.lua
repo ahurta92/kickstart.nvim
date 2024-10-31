@@ -830,48 +830,23 @@ require('lazy').setup({
       }
     end,
   },
-  {
-    'navarasu/onedark.nvim',
-    'zenbones-theme/zenbones.nvim',
-    'rktjmp/lush.nvim',
-    requires = { 'rktjmp/lush.nvim' },
-    depends = { 'rktjmp/lush.nvim' },
-    priority = 1000,
+  { -- You can easily change to a different colorscheme.
+    -- Change the name of the colorscheme plugin below, and then
+    -- change the command in the config to whatever the name of that colorscheme is.
+    --
+    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
+    'folke/tokyonight.nvim',
+    priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
+      -- Load the colorscheme here.
+      -- Like many other themes, this one has different styles, and you could load
+      -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
+      vim.cmd.colorscheme 'default'
+
       -- You can configure highlights by doing something like:
-      vim.g.zenbones_solid_line_nr = true
-      vim.g.zenbones_darken_comments = 45
       vim.cmd.hi 'Comment gui=none'
-      vim.cmd 'set termguicolors'
-      vim.opt.background = 'light'
-      vim.cmd.colorscheme 'onedark'
     end,
   },
-  -- { -- You can easily change to a different colorscheme.
-  --   -- Change the name of the colorscheme plugin below, and then
-  --   -- change the command in the config to whatever the name of that colorscheme is.
-  --   --
-  --   -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-  --   'folke/tokyonight.nvim',
-  --   'rebelot/kanagawa.nvim',
-  --   priority = 1000, -- Make sure to load this before all the other start plugins.
-  --   -- requires 'rktjmp/lush.nvim'
-  --
-  --   init = function()
-  --     -- Load the colorscheme here.
-  --     -- Like many other themes, this one has different styles, and you could load
-  --     -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
-  --
-  --     -- You can configure highlights by doing something like:
-  --     vim.g.zenbones_solid_line_nr = true
-  --     vim.g.zenbones_darken_comments = 45
-  --     vim.cmd.hi 'Comment gui=none'
-  --     vim.cmd.termguicolors()
-  --     vim.cmd.set 'background=light'
-  --     vim.cmd.colorscheme 'zenbone'
-  --   end,
-  -- },
-
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
 
