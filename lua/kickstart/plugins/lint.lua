@@ -8,7 +8,8 @@ return {
       lint.linters_by_ft = {
         markdown = { 'markdownlint' },
         json = { 'jsonlint' },
-        --      cpp = { 'cpplint' },
+        cpp = { 'cpplint' },
+        python = { 'flake8' },
       }
 
       -- To allow other plugins to add linters to require('lint').linters_by_ft,
