@@ -91,7 +91,8 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
+vim.opt.swapfile = false
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -850,15 +851,34 @@ require('lazy').setup({
     end,
   },
 
-  { -- Highlight, edit, and navigate code
+  {
     'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
     config = function()
-      local filetypes = { 'bash', 'c', 'cpp', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      require('nvim-treesitter').install(filetypes)
-      vim.api.nvim_create_autocmd('FileType', {
-        pattern = filetypes,
-        callback = function() vim.treesitter.start() end,
-      })
+      require('nvim-treesitter.configs').setup {
+        -- A list of parser names to be installed
+        ensure_installed = {
+          'bash',
+          'c',
+          'cpp',
+          'diff',
+          'html',
+          'lua',
+          'luadoc',
+          'markdown',
+          'markdown_inline',
+          'query',
+          'vim',
+          'vimdoc',
+        },
+
+        -- Automatically install missing parsers when entering buffer
+        auto_install = true,
+
+        highlight = {
+          enable = true, -- MUST enable this for highlighting to work
+        },
+      }
     end,
   },
 
