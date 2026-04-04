@@ -10,7 +10,7 @@ vim.opt_local.scrolloff = 999 -- "Typewriter mode": keeps cursor centered vertic
 -- 2. Trigger Zen Mode automatically
 -- We wrap this in a schedule call to ensure the plugin is fully
 -- loaded by Lazy before trying to call the command.
-vim.schedule(function() vim.cmd 'ZenMode' end)
+--vim.schedule(function() vim.cmd 'ZenMode' end)
 
 -- 3. Markdown-Specific Keymaps (Buffer-local)
 -- Makes 'j' and 'k' move by visual line, not file line (important for wrapped text)
@@ -18,4 +18,4 @@ vim.keymap.set('n', 'j', 'gj', { buffer = true })
 vim.keymap.set('n', 'k', 'gk', { buffer = true })
 
 -- Quick toggle if you want to exit Zen without closing the file
-vim.keymap.set('n', '<leader>z', ':ZenMode<CR>', { buffer = true, desc = 'Toggle Zen Mode' })
+--vim.keymap.set('n', '<leader>z', ':ZenMode<CR>', { buffer = true, desc = 'Toggle Zen Mode' })

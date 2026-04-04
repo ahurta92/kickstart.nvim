@@ -2,6 +2,7 @@
 return {
   {
     'folke/zen-mode.nvim',
+    enabled = false,
     ft = 'markdown', -- Lazy loads the plugin only for .md files
     opts = {
       window = { width = 0.70 }, -- Adjust to match your screen size
@@ -17,5 +18,6 @@ return {
   {
     'folke/twilight.nvim', -- Optional: dims unselected paragraphs
     ft = 'markdown',
+    enabled = false,
   },
 }
