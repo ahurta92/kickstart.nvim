@@ -475,7 +475,17 @@ require('lazy').setup({
       )
 
       -- Shortcut for searching your Neovim configuration files
+<<<<<<< HEAD
       vim.keymap.set('n', '<leader>sn', function() builtin.find_files { cwd = vim.fn.stdpath 'config' } end, { desc = '[S]earch [N]eovim files' })
+=======
+      vim.keymap.set('n', '<leader>sn', function()
+        builtin.find_files { cwd = vim.fn.stdpath 'config' }
+      end, { desc = '[S]earch [N]eovim files' })
+      -- Shortcut for searching your Neovim configuration files
+      vim.keymap.set('n', '<leader>sv', function()
+        builtin.find_files { cwd = '~/Documents/Research Notes/' }
+      end, { desc = '[S]earch [V]ault files' })
+>>>>>>> b7a2846 (markdown and lint changes)
     end,
   },
 
@@ -697,7 +707,12 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
+<<<<<<< HEAD
         -- python = { "isort", "black" },
+=======
+        python = { 'isort', 'black' },
+        markdown = { 'markdown' },
+>>>>>>> b7a2846 (markdown and lint changes)
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
@@ -868,6 +883,16 @@ require('lazy').setup({
       --  Check out: https://github.com/nvim-mini/mini.nvim
     end,
   },
+<<<<<<< HEAD
+=======
+  { -- Highlight, edit, and navigate code
+    'nvim-treesitter/nvim-treesitter',
+    build = ':TSUpdate',
+    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
+    -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
+    opts = {
+      ensure_installed = { 'bash', 'c', 'cpp', 'diff', 'html', 'lua', 'luadoc', 'query', 'vim', 'vimdoc', 'python', 'latex' },
+>>>>>>> b7a2846 (markdown and lint changes)
 
   {
     'nvim-treesitter/nvim-treesitter',
@@ -937,6 +962,12 @@ require('lazy').setup({
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommended keymaps
+  require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.indent_line',
+  --require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
