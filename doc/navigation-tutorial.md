@@ -1,0 +1,365 @@
+# Navigation — one key and a palette
+
+This config works the way VSCode does: you don't memorize chords, you
+**search for what you want by name**. There is one key to know.
+
+| Key | Does |
+|-----|------|
+| `Ctrl+P` | Find a file in the current project |
+| `Ctrl+P` then `>` | **Command palette** — every action, by name |
+| `Ctrl+P` then `@` | Symbol in this file |
+| `Ctrl+P` then `#` | Symbol anywhere in the workspace |
+| `Ctrl+P` then `:` | Go to line |
+| `Ctrl+P` then `?` | Remind me what the prefixes are |
+
+Three shortcuts for the ones you'll hit constantly:
+
+| Key | Same as |
+|-----|---------|
+| `F1` | `Ctrl+P` `>` — the command palette |
+| `Alt+F` | Search file *contents* across the project |
+| `Ctrl+T` | `Ctrl+P` `#` — symbol in the workspace |
+
+"Project" means the enclosing git repo when there is one, otherwise the
+current directory — the same scoping VSCode gives a workspace folder.
+
+---
+
+## Why no Ctrl+Shift+P
+
+Because Windows Terminal takes it. `Ctrl+Shift+P` opens *its* command
+palette, `Ctrl+Shift+F` is *its* find, and they never reach the SSH
+session at all.
+
+Unbinding them in Windows Terminal does not fix it either. Over SSH,
+`Ctrl+Shift+P` and plain `Ctrl+P` send the identical byte (`0x10`);
+telling them apart needs the extended keyboard protocol, which Windows
+Terminal doesn't speak. Neovim would have nothing to distinguish.
+
+This is not a downgrade. In VSCode, `Ctrl+Shift+P` was only ever a
+shortcut for "`Ctrl+P`, then type `>`" — the prefixes are the real
+interface, and they're the same characters VSCode uses. No filename
+begins with `>`, `@`, `#` or `:`, which is exactly why those were chosen.
+`F1` is VSCode's own second binding for the palette, and it survives the
+trip intact.
+
+**Want the literal key back?** Windows Terminal can send arbitrary bytes.
+In its `settings.json`, under `actions`:
+
+```json
+{ "command": { "action": "sendInput", "input": "\u001bf" }, "keys": "ctrl+shift+f" }
+```
+
+`\u001bf` is the byte sequence for Alt+F, which this config already maps
+to project search — so Windows Terminal's `Ctrl+Shift+F` would reach
+Neovim as Alt+F and do the right thing. You give up Windows Terminal's
+own find to get it, which is why this is opt-in and not the default.
+`F1` is one key and costs nothing.
+
+**To check what your terminal actually delivers:** run `:KeyCheck` and
+press the keys it lists. Each one that arrives prints a ✓. Anything
+missing is being eaten before Neovim sees it.
+
+Fallbacks that work no matter what, forever:
+
+| Wanted | Always works |
+|--------|--------------|
+| Command palette | `<Space>p` |
+| Search across project | `<Space>sg` |
+| Symbol in this file | `gO` |
+
+---
+
+## Part 1 — The palette is the whole interface
+
+Press `F1` (or `Ctrl+P` then `>`, or `<Space>p`) and type. Matching is
+fuzzy across the category, the name, and a set of hidden synonyms, so you
+can type the word you happen to think of rather than the word in the menu.
+
+Entries are grouped by category:
+
+| Category | What lives there |
+|----------|------------------|
+| `File` | find, recent, buffers, save, close |
+| `Search` | project grep, word under cursor, in-file, open files |
+| `Go` | symbols, definition, references, implementation, line |
+| `Code` | rename, code action, format, inlay hints |
+| `Problems` | diagnostics |
+| `Git` | status, commits, branches, blame, hunks |
+| `Project` | your named locations (see Part 2) |
+| `Worktree` | MADNESS threads, live from `git worktree list` |
+| `MADNESS` | `cm_build`, `cm_run`, `cm_unit`, release board |
+| `Marks` | Harpoon pins |
+| `Session` | restore buffers/layout per directory |
+| `Explorer` | Oil file browser |
+| `Claude` | browse or grep Claude's memory files |
+| `Config` / `Neovim` / `Help` | init.lua, Lazy, Mason, keymaps, this file |
+
+Whatever you ran last floats to the top next time you open the palette,
+so the three things you actually use stay one keystroke away.
+
+**Try it:** `F1`, type `gecko` → opens the Gecko source. Then `F1` again —
+it's the first entry now.
+
+---
+
+## Part 2 — Projects
+
+Every named location lives in one table in
+`lua/custom/plugins/workspace.lua`, and each one gets its own palette
+entry: `Project │ Open <label>`.
+
+| Palette entry | Opens |
+|---------------|-------|
+| `Open Gecko source` | find_files |
+| `Open Madness workspace (studies/refs/es_bench)` | find_files |
+| `Open DALTON source` | find_files |
+| `Open Development root` | find_files |
+| `Open Notes` | find_files |
+| `Open Project data root` | find_files |
+| `Open Scratch calcs (gecko)` | Oil browser |
+| `Open Scratch root (all calc dirs)` | Oil browser |
+| `Open ES bench calcs` | Oil browser |
+| `Open Molecule library` | Oil browser |
+
+Three entries work across all of them:
+
+- `Project │ Open a project...` — pick one, open it
+- `Project │ Find a file in a project...` — pick one, then **filename**
+  search. Works even on the Oil-browse dirs, so this is how you reach a
+  calc file under scratch by typing part of its name.
+- `Project │ Search in a project...` — pick one, then **content** grep
+
+**Try it:** `F1` → `search in a project` → pick "DALTON source" →
+type `polarizability`. Results update live; `<Enter>` jumps to the line.
+
+Opening a project `cd`s into it, so `Ctrl+P` and `Alt+F` afterwards
+are scoped there.
+
+---
+
+## Part 3 — MADNESS worktrees
+
+The thread list comes live from `git worktree list` on the madness repo —
+never hardcoded, so new threads appear automatically.
+
+All three first **fuzzy-pick a worktree**, then `:tcd` the tab into it:
+
+- `Worktree │ Find a file in a thread...`
+- `Worktree │ Search in a thread...`
+- `Worktree │ Browse a thread...`
+
+Because of the `:tcd`, `Ctrl+P` and `Alt+F` afterwards operate on that
+thread.
+
+Build and run in the same thread, all under `MADNESS` in the palette:
+`Build` (`cm_env && cm_build`), `Run h2o`, `Unit tests`, `Open cm shell
+here`, `Run a cm_* command...`. Each opens a terminal split that has
+already sourced `cm.sh` and `cm_use`'d the worktree's branch.
+
+`MADNESS │ Open release board` opens `RELEASE_STATUS.md`;
+`MADNESS │ Find a doc in this thread` fuzzy-finds the markdown in it.
+
+**Try it:** `F1` → `search in a thread` → pick `raman` → type
+`polarizability`. Then press `Alt+F` — note it now searches the raman
+thread.
+
+---
+
+## Part 4 — Harpoon: pin the files you're bouncing between
+
+This is the one thing that is *not* palette-first, because searching for
+a bookmark by name defeats the purpose of a one-keystroke jump. Slots are
+on `Alt+1` … `Alt+4`, the VSCode "switch to tab N" key.
+
+- `F1` → `Marks │ Pin this file`
+- `Alt+1` … `Alt+4` — jump straight to a pin
+- `F1` → `Marks │ Show pinned files` — see and edit the list
+
+**The intended loop:** search a thread for a hot spot → pin it → bounce
+between pins with `Alt+1`/`Alt+2` all session without touching a picker.
+
+---
+
+## Part 5 — Oil survival guide (the browse dirs)
+
+`Project │ Open Scratch root` drops you into an editable directory buffer:
+
+- `<Enter>` — enter dir / open file
+- `-` — go up one directory
+- `gt` — sort newest first · `gn` — back to name order
+- Edit lines like text, then `:w` — renames/deletes files (careful!)
+- `g?` — full Oil help
+
+---
+
+## Part 6 — Two-minute self-test
+
+No mouse, no `:e` with a typed path:
+
+1. Open a file in the DALTON source containing `CC2`.
+2. Jump to `RELEASE_STATUS.md`.
+3. Search the `feat/tpa` worktree for `quadratic`.
+4. Pin that file, open a calc dir under scratch root, jump back to the pin.
+5. Find a calc file by name under gecko_calcs.
+6. Jump to a function in the file you have open, then to one in another file.
+
+Steps 1–5 are all `F1` plus a word. Step 6 is `Ctrl+P` `@`, then
+`Ctrl+P` `#`. If that feels fast, you've got it.
+
+---
+
+## What's left on `<leader>`
+
+`<Space>` is still leader, and kickstart's own maps are untouched:
+`<Space>s…` search, `<Space>g…` git, `<Space>f` format, `<Space>q`
+diagnostics, `gr…` LSP. They overlap the palette on purpose — use
+whichever you reach for. The only custom leader key is `<Space>p`, the
+palette fallback.
+
+---
+
+## Completion
+
+One menu, one key. `<Tab>` accepts whatever is selected.
+
+| Key | Does |
+|-----|------|
+| `<Tab>` | **accept** the selected item |
+| `<C-n>` / `<C-p>` | next / previous (also `<Down>` / `<Up>`) |
+| `<C-y>` | also accepts — kept from the old default preset |
+| `<C-space>` | open the menu; press again for documentation |
+| `<C-e>` | dismiss |
+| `<C-k>` | toggle signature help |
+| `<C-b>` / `<C-f>` | scroll the documentation window |
+
+`<Tab>` is context-sensitive, in this order: inside an expanded snippet it
+jumps to the next placeholder (`<S-Tab>` goes back); with the menu open it
+accepts; with neither, it inserts a real tab.
+
+Five sources feed that one menu:
+
+| Source | Gives you |
+|--------|-----------|
+| `lsp` | real completions from clangd, pyright, lua_ls, fortls |
+| `copilot` | GitHub Copilot, as ordinary menu entries |
+| `buffer` | words already in your open buffers |
+| `path` | filesystem paths |
+| `snippets` | LuaSnip |
+
+`buffer` matters more than it sounds: without it there was no menu at all
+in any file with no LSP attached — plain text, markdown, an unconfigured
+filetype.
+
+Nothing is written to the buffer until you accept. blink's default inserts
+each item as you arrow past it, which is unbearable once Copilot's
+multi-line blocks are in the list, so `auto_insert` is off.
+
+Ranking is left to the fuzzy matcher — Copilot competes with the LSP on
+merit rather than being pinned above or below it. To bias it, add
+`score_offset` to the `copilot` provider in `init.lua`: positive floats it
+up, negative sinks it below real LSP results.
+
+### If Copilot isn't suggesting anything
+
+`F1` → `Copilot │ Status`. The usual answer is that you're signed out:
+`F1` → `Copilot │ Sign in`.
+
+Copilot runs on a self-contained server binary that downloads on first
+use, so it does **not** need Node.js on your PATH. That was the old
+problem — `github/copilot.vim` needed `node`, nvm is installed under
+`~/.nvm` but nothing sources it, so Copilot had quietly been dead while
+still holding `<Tab>` hostage. If the native binary ever fails, there are
+two lines in `lua/custom/plugins/copilot.lua` that switch it to the nvm
+Node instead.
+
+---
+
+## Formatting
+
+`<Space>f` formats the buffer. In visual mode it formats just the
+selection. Everything also formats on save, except C and C++.
+
+| Filetype | Runs |
+|----------|------|
+| Lua | `stylua` |
+| Python | `ruff_organize_imports`, then `ruff_format` |
+| anything else | the LSP, if it offers formatting |
+
+Python uses **ruff, not black or blackd**. conform has no `blackd`
+formatter at all — the name does not exist in its registry, so
+`python = { 'blackd' }` simply errors. Supporting it would mean a
+hand-written formatter entry plus a `blackd` daemon running on every
+machine you touch, which no compute-node job would have.
+
+`ruff_format` solves the same problem blackd exists to solve — black's
+slow cold start — without the daemon. It is one static Rust binary at
+roughly 10ms, its output is a drop-in match for black, and it needs no
+Node. `ruff_organize_imports` replaces isort and runs first.
+
+Mason installs it automatically; it is listed in `ensure_installed` in
+`init.lua`.
+
+**When formatting does nothing**, `F1` → `Code │ Which formatter runs
+here?` (`:ConformInfo`) shows what conform picked for the buffer and
+whether the binary was actually found.
+
+Note that pyright does **not** format — it reports no formatting
+capability at all — so on Python the `lsp_format = 'fallback'` path can
+never do anything. The formatter list above is the only thing that runs.
+
+---
+
+## Appearance
+
+The colorscheme is Neovim's built-in `default` — no plugin. That is the
+whole point: a fresh clone of this config looks right before lazy.nvim has
+downloaded anything, including on a compute node with no network, and it
+degrades to the terminal's own colours instead of going flat grey on a
+terminal without truecolor.
+
+It is deliberately low-chroma. Strings are green, comments grey, functions
+cyan, diagnostics red — but keywords are **bold** rather than coloured. If
+that reads as too flat, `F1` → `Appearance │ Try another colorscheme`
+previews the alternatives live as you move through the list. `retrobox`
+(gruvbox-like, warm) and `habamax` (higher contrast) are the usual picks.
+Everything in that list ships with Neovim, so whatever you choose stays as
+portable as `default`. To keep it, change the one `vim.cmd.colorscheme`
+line in `lua/options.lua`.
+
+Neovim asks the terminal for its background colour at startup, so a light
+terminal gets the light variant on its own. When a terminal doesn't answer
+— some SSH and tmux setups don't — `F1` → `Appearance │ Toggle light /
+dark` flips it for the session.
+
+---
+
+## Adding things later
+
+**A new project location** — edit `lua/custom/plugins/workspace.lua`,
+add one line to the `projects` table:
+
+```lua
+{ dir = '/path/to/thing', desc = 'Label', browse = false },
+```
+
+`browse = false` → Telescope find_files (code); `browse = true` → Oil
+(data dirs that may be empty or huge — find_files shows nothing at all in
+an empty dir, which reads as a broken keybinding). It appears in the
+palette immediately, including the three cross-project entries.
+
+**A new action** — register it from any file under `lua/custom/plugins/`:
+
+```lua
+require('custom.palette').register {
+  {
+    category = 'MADNESS',
+    name = 'Run the big benchmark',
+    desc = 'extra words for fuzzy matching, not displayed',
+    run = function() ... end,
+  },
+}
+```
+
+That is the whole extension point. Re-registering the same
+category + name replaces the entry instead of duplicating it.
