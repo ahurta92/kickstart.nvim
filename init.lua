@@ -600,7 +600,12 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       ---@type table<string, vim.lsp.Config>
       local servers = {
-        clangd = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--query-driver=/opt/rocm-6.4.3/lib/llvm/bin/clang++,/opt/rocm-6.4.3/lib/llvm/bin/clang',
+          },
+        },
         pyright = {},
         -- gopls = {},
         -- rust_analyzer = {},
