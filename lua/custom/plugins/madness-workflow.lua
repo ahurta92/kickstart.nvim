@@ -141,7 +141,9 @@ return {
             require('telescope.builtin').find_files {
               cwd = git_root(),
               prompt_title = 'Docs in this thread',
-              find_command = { 'rg', '--files', '--glob', '*.md' },
+              -- --no-ignore-vcs/--hidden so gitignored docs/ and .claude/
+              -- plans show up here too, matching Ctrl+P (see init.lua).
+              find_command = { 'rg', '--files', '--no-ignore-vcs', '--hidden', '--glob', '*.md', '--glob', '!.git/' },
             }
           end,
         },

@@ -359,6 +359,50 @@ lets the service keep running after you log out and start again at boot.
 
 ---
 
+## Searching gitignored files
+
+`fd` and `rg` both respect `.gitignore` out of the box, which meant whole
+categories of writing were invisible to `Ctrl+P` and `Alt+F` — the
+superpowers plans and specs under `docs/` in worktrees that gitignore
+`docs/`, and everything under `.claude/`. Files you deliberately do not
+commit but very much want to find.
+
+Telescope is now configured with `--no-ignore-vcs` (stop honouring
+`.gitignore`) and `--hidden` (reach dotted directories), plus an exclude list
+for the junk. That covers `Ctrl+P`, `Alt+F`, and every `Search in a
+project/thread` entry, since they all inherit telescope's defaults.
+
+The excludes matter more than the flags. Measured on real repos:
+
+| repo | default | `--hidden` naive | tuned |
+|------|---------|------------------|-------|
+| madness-workspace | 656 | 28,378 | 794 |
+| madness | 2,179 | 10,334 | 2,229 |
+| phase0 worktree | 2,178 | — | 2,195 (all 7 plans) |
+
+Two of those excludes are non-obvious:
+
+- **`build*`, not `build`.** The madness repo carries `build-40core`,
+  `build_amd` and `build-amd96`; matching only `build` let 5,400 object
+  files back in.
+- **`.claude/worktrees`, path-scoped.** That directory holds 2,339 files of
+  Claude Code worktree state next to 2 actual skills. Scoped to the path so a
+  directory merely *named* `worktrees` elsewhere is unaffected.
+
+### Hiding something without committing to .gitignore
+
+`.ignore` and `.rgignore` files are **still honoured** under
+`--no-ignore-vcs` (verified with both tools). That is the per-repo escape
+hatch: drop a `.ignore` in a repo with, say,
+
+    refs/_dalton_scratch/
+
+and those 108 scratch files vanish from these pickers while staying exactly
+as they are in `.gitignore`. Use the global list in `init.lua` for junk that
+is junk everywhere, and a local `.ignore` for noise specific to one repo.
+
+---
+
 ## Appearance
 
 The colorscheme is **tokyonight** (`night`), set in

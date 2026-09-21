@@ -388,16 +388,94 @@ require('lazy').setup({
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
+      -- ===================================================================
+      -- Searching gitignored files
+      -- ===================================================================
+      -- fd and rg both respect .gitignore out of the box, which meant whole
+      -- categories of writing were invisible to Ctrl+P and Alt+F: the
+      -- superpowers plans and specs under docs/ in the worktrees that
+      -- gitignore docs/, and everything under .claude/. Those are files you
+      -- deliberately do not commit but very much want to find.
+      --
+      -- So: --no-ignore-vcs (stop honouring .gitignore) and --hidden (reach
+      -- dotted directories like .claude), then exclude the junk by hand.
+      -- Without excludes, --hidden turns madness-workspace from 656 files
+      -- into 28,378 -- almost all of it .venv and .git. With them, 794.
+      --
+      -- NOTE: .ignore / .rgignore files are STILL honoured under
+      -- --no-ignore-vcs (verified). That is the escape hatch for per-repo
+      -- noise that does not belong in this global list -- drop a .ignore in
+      -- the repo with e.g. `refs/_dalton_scratch/` and it disappears from
+      -- these pickers while staying in .gitignore.
+      -- Plain directory names, matched at any depth.
+      --
+      -- 'build*' rather than 'build': the madness repo carries build-40core,
+      -- build_amd and build-amd96, and matching only 'build' let 5,400 object
+      -- files back in.
+      local search_excludes = {
+        '.git',
+        '.venv',
+        'venv',
+        'build*', -- build, build_amd, build-40core, build-amd96, ...
+        'node_modules',
+        '__pycache__',
+        '.mypy_cache',
+        '.cache',
+        '.ipynb_checkpoints',
+        '*.egg-info',
+      }
+
+      -- Path-scoped, so a directory merely NAMED worktrees elsewhere survives.
+      -- madness/.claude holds 2,339 files of Claude Code worktree state next
+      -- to 2 actual skills; without this the repo went 2,179 -> 10,334 files.
+      local search_exclude_paths = {
+        fd = { '.claude/worktrees' },
+        rg = { '**/.claude/worktrees/**' },
+      }
+
+      local function fd_find_command()
+        local cmd = { 'fd', '--type', 'f', '--color', 'never', '--hidden', '--no-ignore-vcs' }
+        for _, e in ipairs(search_excludes) do
+          vim.list_extend(cmd, { '--exclude', e })
+        end
+        for _, e in ipairs(search_exclude_paths.fd) do
+          vim.list_extend(cmd, { '--exclude', e })
+        end
+        return cmd
+      end
+
+      local function rg_grep_arguments()
+        local args = {
+          'rg',
+          '--color=never',
+          '--no-heading',
+          '--with-filename',
+          '--line-number',
+          '--column',
+          '--smart-case',
+          '--hidden',
+          '--no-ignore-vcs',
+        }
+        for _, e in ipairs(search_excludes) do
+          vim.list_extend(args, { '--glob', '!' .. e .. '/' })
+        end
+        for _, e in ipairs(search_exclude_paths.rg) do
+          vim.list_extend(args, { '--glob', '!' .. e })
+        end
+        return args
+      end
+
       require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          -- Drives live_grep and grep_string, so Alt+F and every
+          -- "Search in a project/thread" entry inherit this.
+          vimgrep_arguments = rg_grep_arguments(),
+        },
+        pickers = {
+          -- Drives find_files, so Ctrl+P and the project/worktree file
+          -- pickers inherit it.
+          find_files = { find_command = fd_find_command() },
+        },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
