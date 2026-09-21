@@ -310,6 +310,55 @@ never do anything. The formatter list above is the only thing that runs.
 
 ---
 
+## External tools
+
+Telescope hard-requires **ripgrep** for content search and prefers **fd** for
+filename search. Neither ships with Neovim and neither lives in this repo, so
+a fresh clone looks subtly broken: pickers open and return nothing.
+
+    ./scripts/install-tools.sh
+
+Installs both as single static musl binaries into `~/.local/bin` — no root, no
+package manager, and no glibc dependency, so they work on compute nodes too.
+Safe to re-run; it skips what is already present. ripgrep's download is
+checksum-verified against the published `.sha256`; fd publishes no checksum,
+so that one is trusted on HTTPS alone.
+
+## Obsidian vault sync
+
+The vault lives at `/gpfs/projects/rjh/adrian/repos/vaults/research` (vault
+"IACS"). It syncs through **Obsidian Sync** via `obsidian-headless` (`ob`),
+supervised by a systemd user service, so edits you write in Neovim upload
+within a few seconds and edits from any other device land here without you
+doing anything.
+
+    systemctl --user status  obsidian-sync
+    systemctl --user restart obsidian-sync
+    journalctl --user -u obsidian-sync -f
+
+Or from the palette: `F1` → `Obsidian │ Sync status` / `Sync log (follow)` /
+`Restart sync`, plus `Open vault` and `Search vault`.
+
+`scripts/obsidian-sync.sh` is what the service runs. Two non-obvious things
+are pinned in it:
+
+- **Node 24, specifically.** `ob` bundles `better-sqlite3`, a native module
+  built against the cluster's `node.js/24.4.1` (`NODE_MODULE_VERSION 137`).
+  Both nvm versions fail with `ERR_DLOPEN_FAILED`. Reinstall `ob` under a
+  different Node and you must update `NODE_BIN` in the script to match.
+- **`~/.local/bin` on PATH.** systemd does not read `~/.zshrc`, and that is
+  where the `ob` symlink lives.
+
+`~/.zshrc` separately puts nvm's Node on PATH for interactive shells, so `ob`
+works when you run it by hand. That is a *different* Node from the one the
+service uses, on purpose — see the pin above.
+
+Linger is enabled for this account (`loginctl enable-linger`), which is what
+lets the service keep running after you log out and start again at boot.
+`loginctl disable-linger ahurtado` reverts it.
+
+---
+
 ## Appearance
 
 The colorscheme is Neovim's built-in `default` — no plugin. That is the

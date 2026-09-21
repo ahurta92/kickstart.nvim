@@ -176,6 +176,35 @@ return {
         { category = 'Explorer', name = 'Browse this directory', desc = 'oil file manager tree', run = function() vim.cmd 'Oil' end },
         { category = 'Explorer', name = 'Browse in floating window', run = function() require('oil').toggle_float() end },
 
+        -- Obsidian Sync runs as a systemd user service (scripts/obsidian-sync.sh);
+        -- these are for when you want to see whether it is actually alive.
+        { category = 'Obsidian', name = 'Open vault', desc = 'notes research iacs', run = function()
+          require('telescope.builtin').find_files {
+            cwd = '/gpfs/projects/rjh/adrian/repos/vaults/research',
+            prompt_title = 'Vault: research',
+          }
+        end },
+        { category = 'Obsidian', name = 'Search vault', desc = 'grep notes', run = function()
+          require('telescope.builtin').live_grep {
+            cwd = '/gpfs/projects/rjh/adrian/repos/vaults/research',
+            prompt_title = 'Search vault',
+          }
+        end },
+        { category = 'Obsidian', name = 'Sync status', desc = 'systemd service running working', run = function()
+          vim.cmd 'botright 15split | terminal systemctl --user status obsidian-sync --no-pager'
+        end },
+        { category = 'Obsidian', name = 'Sync log (follow)', desc = 'journal tail debug', run = function()
+          vim.cmd 'botright 15split | terminal journalctl --user -u obsidian-sync -f -n 40'
+        end },
+        { category = 'Obsidian', name = 'Restart sync', desc = 'fix stuck service', run = function()
+          vim.system({ 'systemctl', '--user', 'restart', 'obsidian-sync' }, {}, function(r)
+            vim.schedule(function()
+              vim.notify(r.code == 0 and 'obsidian-sync restarted' or ('restart failed: ' .. (r.stderr or '')),
+                r.code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
+            end)
+          end)
+        end },
+
         { category = 'Help', name = 'Keybinding cheatsheet', desc = 'tutorial docs navigation', run = function()
           vim.cmd('edit ' .. vim.fn.fnameescape(vim.fn.stdpath 'config' .. '/doc/navigation-tutorial.md'))
         end },
