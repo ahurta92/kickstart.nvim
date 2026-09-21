@@ -18,8 +18,15 @@ return {
   {
     'obsidian-nvim/obsidian.nvim',
     version = '*',
-    ft = 'markdown',
     dependencies = { 'nvim-lua/plenary.nvim' },
+
+    -- `ft` alone is not enough. With only ft = 'markdown', :Obsidian does not
+    -- exist until a markdown buffer has been opened, so reaching the vault
+    -- from the palette while editing C++ in a worktree failed with
+    -- "E492: Not an editor command". `cmd` makes lazy.nvim register a stub
+    -- that loads the plugin on first use, from any buffer.
+    ft = 'markdown',
+    cmd = 'Obsidian',
 
     ---@module 'obsidian'
     opts = {

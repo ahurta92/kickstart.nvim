@@ -430,6 +430,16 @@ Two settings are off deliberately:
 Note `date_format` uses Moment.js tokens (`YYYY-MM-DD`), not strftime —
 `%Y-%m-%d` silently creates a file named `%Y-%m-%d.md`.
 
+All of it reaches the vault **from anywhere** — you do not have to be in a
+note, or even in a markdown file. `F1` → `Obsidian │ Today's daily note` from
+a C++ buffer in a worktree opens the vault's daily note; `Open vault` and
+`Search vault` scope to the vault path explicitly, so your cwd is irrelevant.
+
+That needed `cmd = 'Obsidian'` in the lazy spec alongside `ft = 'markdown'`.
+With `ft` alone the plugin does not load until a markdown buffer exists, so
+`:Obsidian` was undefined from a `.cpp` or `.lua` file and the palette
+entries failed with "E492: Not an editor command".
+
 This plugin does not sync anything; that is the headless client above. It
 edits files on disk and the sync daemon picks them up within seconds.
 
