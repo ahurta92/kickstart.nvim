@@ -361,25 +361,77 @@ lets the service keep running after you log out and start again at boot.
 
 ## Appearance
 
-The colorscheme is Neovim's built-in `default` — no plugin. That is the
-whole point: a fresh clone of this config looks right before lazy.nvim has
-downloaded anything, including on a compute node with no network, and it
-degrades to the terminal's own colours instead of going flat grey on a
-terminal without truecolor.
+The colorscheme is **tokyonight** (`night`), set in
+`lua/custom/plugins/theme.lua`.
 
-It is deliberately low-chroma. Strings are green, comments grey, functions
-cyan, diagnostics red — but keywords are **bold** rather than coloured. If
-that reads as too flat, `F1` → `Appearance │ Try another colorscheme`
-previews the alternatives live as you move through the list. `retrobox`
-(gruvbox-like, warm) and `habamax` (higher contrast) are the usual picks.
-Everything in that list ships with Neovim, so whatever you choose stays as
-portable as `default`. To keep it, change the one `vim.cmd.colorscheme`
-line in `lua/options.lua`.
+`lua/options.lua` still sets Neovim's built-in `default` first, before
+lazy.nvim has loaded anything, and that stays deliberately. It is the floor:
+a fresh clone, an offline compute node, or a broken plugin directory all
+still give readable colours, and tokyonight upgrades on top when present.
+There is nothing to fall back to by hand.
 
-Neovim asks the terminal for its background colour at startup, so a light
-terminal gets the light variant on its own. When a terminal doesn't answer
-— some SSH and tmux setups don't — `F1` → `Appearance │ Toggle light /
-dark` flips it for the session.
+tokyonight compiles its highlight groups to a disk cache and reloads them
+without re-evaluating the palette, so it costs close to nothing at startup,
+and it ships real integrations for what this config uses — telescope,
+blink.cmp, gitsigns, which-key, render-markdown, mini.statusline.
+
+Italics are off for comments and keywords on purpose: over SSH + tmux +
+Windows Terminal some fonts substitute a slanted fallback at a different
+width, which makes comment lines jitter.
+
+Light terminals still work — `light_style = 'day'` is picked up when
+`background` flips, so `F1` → `Appearance │ Toggle light / dark` behaves as
+before. `F1` → `Appearance │ Try another colorscheme` previews alternatives
+live.
+
+## Markdown rendering
+
+`render-markdown.nvim` is the only renderer. **headlines.nvim used to be
+configured alongside it and both were loading** — each draws a background
+behind headings and fenced code, so every heading got two stacked
+backgrounds and every code block a doubled border. That was the ugliness;
+headlines.nvim is gone.
+
+Heading colour comes from the colorscheme, not from render-markdown:
+tokyonight defines `@markup.heading.1..6` distinctly, so the six levels read
+as different hues (H1 blue, H2 amber, H3 green, H4 teal) rather than as
+identical bold white text behind a coloured bar.
+
+The rest is tuned in `lua/custom/plugins/render-markdown.lua`: level icons
+inline, backgrounds hugging the text (`width = 'block'`) instead of running
+the full line, code blocks with a thin border and the language right-aligned,
+rounded tables. `anti_conceal` reveals the raw markdown on the cursor line so
+editing a link or table never fights the rendering.
+
+## Obsidian notes
+
+`obsidian.nvim` makes the vault's wiki links live — 95 of them across 21 of
+30 notes, previously inert text in Neovim.
+
+- `gf` follows the `[[link]]` under the cursor (native; the plugin sets
+  `includeexpr`)
+- `F1` → `Obsidian │ Backlinks to this note` — what links *here*, which has
+  no equivalent elsewhere in this config
+- `F1` → `Obsidian │ Today's daily note`, `Insert template`,
+  `Rename note (updates backlinks)`, `Switch note by title`, `Table of
+  contents`
+- `:Obsidian <Tab>` for the rest
+
+Two settings are off deliberately:
+
+- **`ui.enable = false`** — obsidian.nvim ships its own conceal/highlight
+  layer, on by default. render-markdown already owns rendering; running both
+  recreates exactly the headlines.nvim double-decoration problem.
+- **`frontmatter.enabled = false`** — only 2 of the 30 notes have
+  frontmatter. Left on, it writes `id`/`aliases`/`tags` into the other 28 as
+  you save them, and every one of those writes syncs to your other devices.
+  Turn it on deliberately, not by accident.
+
+Note `date_format` uses Moment.js tokens (`YYYY-MM-DD`), not strftime —
+`%Y-%m-%d` silently creates a file named `%Y-%m-%d.md`.
+
+This plugin does not sync anything; that is the headless client above. It
+edits files on disk and the sync daemon picks them up within seconds.
 
 ---
 
