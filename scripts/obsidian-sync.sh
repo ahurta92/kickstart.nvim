@@ -21,6 +21,14 @@
 
 set -euo pipefail
 
+# systemd never reads the site file, which is where the cluster exports its
+# /gpfs vault path -- so without this the service would look in the default,
+# find nothing, and restart-loop. Take ONLY that one variable from it, in a
+# throwaway subshell, so none of the site's PATH/alias setup leaks in here.
+SITEF="${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/site.sh"
+if [[ -z "${OBSIDIAN_VAULT:-}" && -r "$SITEF" ]]; then
+  OBSIDIAN_VAULT="$(bash -c '_path_prepend() { :; }; . "$1" >/dev/null 2>&1; printf %s "${OBSIDIAN_VAULT:-}"' _ "$SITEF")"
+fi
 VAULT="${OBSIDIAN_VAULT:-$HOME/vaults/research}"
 
 case ":$PATH:" in
