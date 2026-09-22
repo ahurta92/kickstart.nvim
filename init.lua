@@ -324,6 +324,7 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch', mode = { 'n', 'v' } },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
+        { '<leader>o', group = '[O]bsidian' },
         { 'gr', group = 'LSP Actions', mode = { 'n' } },
       },
     },
@@ -484,7 +485,7 @@ require('lazy').setup({
 
       -- Shortcut for searching your notes vault
       vim.keymap.set('n', '<leader>sv', function()
-        builtin.find_files { cwd = '~/Documents/Research Notes/' }
+        builtin.find_files { cwd = vim.env.OBSIDIAN_VAULT or vim.fn.expand '~/vaults/research' }
       end, { desc = '[S]earch [V]ault files' })
     end,
   },
@@ -660,9 +661,16 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
+      -- Mason's clangd has no linux-arm64 build, so on ARM it fails to install
+      -- on every startup. Use the system clangd (apt `clangd`) when present;
+      -- vim.lsp.enable finds it on PATH either way.
+      local ensure_installed = vim.tbl_filter(function(name) return not (name == 'clangd' and vim.fn.executable 'clangd' == 1) end, vim.tbl_keys(servers or {}))
       vim.list_extend(ensure_installed, {
-        -- You can add other tools here that you want Mason to install
+        -- Formatters/linters referenced by conform (formatters_by_ft) and nvim-lint
+        'mdformat',
+        'isort',
+        'black',
+        'markdownlint',
       })
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
