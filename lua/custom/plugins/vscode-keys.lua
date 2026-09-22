@@ -216,6 +216,9 @@ return {
 
         { category = 'Neovim', name = 'Plugin manager (Lazy)', run = function() vim.cmd 'Lazy' end },
         { category = 'Neovim', name = 'LSP installer (Mason)', run = function() vim.cmd 'Mason' end },
+        -- Mason's startup auto-install is off (it cost ~10s per launch); this
+        -- is how the ensure_installed list gets applied.
+        { category = 'Neovim', name = 'Install/update Mason tools', desc = 'ensure_installed lsp formatters missing', run = function() vim.cmd 'MasonToolsUpdate' end },
         { category = 'Neovim', name = 'Health check', run = function() vim.cmd 'checkhealth' end },
         { category = 'Neovim', name = 'Messages', desc = 'log output errors', run = function() vim.cmd 'messages' end },
       }

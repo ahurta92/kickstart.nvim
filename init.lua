@@ -744,7 +744,20 @@ require('lazy').setup({
         'ruff', -- Python formatter + import sorter; see formatters_by_ft below
       })
 
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+      -- run_on_start = false is a 72x startup win, not a preference.
+      --
+      -- By default mason-tool-installer checks ensure_installed on every
+      -- launch, and that check refreshes the Mason registry over the network.
+      -- From this cluster that took ~10 SECONDS, every single time, even with
+      -- every tool already installed. Measured: 10,052 ms -> 139 ms of
+      -- startuptime; 10 s -> 0.20 s wall clock.
+      --
+      -- Nothing is lost: install.sh runs :MasonToolsUpdate once at setup, and
+      -- F1 -> "Neovim | Install/update Mason tools" re-runs it on demand.
+      require('mason-tool-installer').setup {
+        ensure_installed = ensure_installed,
+        run_on_start = false,
+      }
 
       for name, server in pairs(servers) do
         vim.lsp.config(name, server)
