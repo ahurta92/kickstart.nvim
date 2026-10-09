@@ -184,7 +184,8 @@ vim.diagnostic.config {
   underline = { severity = { min = vim.diagnostic.severity.WARN } },
 
   -- Can switch between these as you prefer
-  virtual_text = true, -- Text shows up at the end of the line
+  -- Text shows up at the end of the line; hints/info stay in signs and the float
+  virtual_text = { severity = { min = vim.diagnostic.severity.WARN } },
   virtual_lines = false, -- Text shows up underneath the line, with virtual lines
 
   -- Auto open the float, so you can easily read the errors when jumping with `[d` and `]d`
@@ -697,8 +698,32 @@ require('lazy').setup({
         clangd = {
           cmd = {
             'clangd',
-            '--query-driver=/opt/rocm-6.4.3/lib/llvm/bin/clang++,/opt/rocm-6.4.3/lib/llvm/bin/clang',
+            -- /usr/bin/c++ and g++: clang otherwise picks /usr/lib/gcc/*/14, which
+            -- has no libstdc++ headers here, and <atomic> etc. are "not found".
+            '--query-driver=/opt/rocm-6.4.3/lib/llvm/bin/clang++,/opt/rocm-6.4.3/lib/llvm/bin/clang,/usr/bin/c++,/usr/bin/g++*,/usr/bin/cc,/usr/bin/gcc*',
           },
+          -- clangd only searches <parent>/ and <parent>/build/ for
+          -- compile_commands.json, so a CMake tree at build/<variant>/ (one per
+          -- git worktree) is never found and every file falls back to guessed
+          -- flags. Point clangd at the newest database under this root instead.
+          -- A top-level compile_commands.json or .clangd still wins.
+          before_init = function(params, config)
+            local root = config.root_dir
+            if not root or vim.uv.fs_stat(root .. '/compile_commands.json') or vim.uv.fs_stat(root .. '/.clangd') then return end
+            local best, best_mtime = nil, -1
+            for _, pattern in ipairs { '/build/compile_commands.json', '/build/*/compile_commands.json', '/cmake-build-*/compile_commands.json' } do
+              for _, db in ipairs(vim.fn.glob(root .. pattern, false, true)) do
+                local stat = vim.uv.fs_stat(db)
+                if stat and stat.mtime.sec > best_mtime then
+                  best, best_mtime = db, stat.mtime.sec
+                end
+              end
+            end
+            if not best then return end
+            params.initializationOptions = params.initializationOptions or {}
+            params.initializationOptions.compilationDatabasePath = vim.fs.dirname(best)
+            vim.schedule(function() vim.notify('clangd: using ' .. vim.fs.dirname(best), vim.log.levels.INFO) end)
+          end,
         },
         pyright = {},
         -- gopls = {},
