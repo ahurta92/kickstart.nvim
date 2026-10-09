@@ -1,72 +1,78 @@
--- workspace.lua — named project locations, and file marks.
+-- workspace.lua — projects, and file marks.
 --
--- Nothing here claims a <leader> chord any more. Everything is reachable by
--- name from the command palette (Ctrl+Shift+P, or <leader>p):
+-- No project list to maintain. A project is the git repo (or Obsidian vault)
+-- around whatever file you are editing, so the same config works on every
+-- machine:
 --
---     "gecko"     -> Project │ Open Gecko source
---     "scratch"   -> Project │ Open Scratch root (all calc dirs)
---     "grep"      -> Project │ Search in a project...
+--   * Opening a file moves this tab's cwd to that file's project root, so
+--     Ctrl+P, grep, Harpoon and sessions are scoped to it no matter where
+--     nvim was started. Files outside any project leave the cwd alone.
+--   * <leader>sp  "Switch project": the vault, then every project you have
+--     recently edited a file in (taken from :oldfiles).
 --
--- The one exception is Harpoon's numbered slots, which are on Alt+1..4 —
--- the VSCode "switch to tab N" key. Searching for a mark by name would
--- defeat the point of a one-keystroke jump.
+-- Harpoon's numbered slots are on Alt+1..4. For a handful of files you
+-- always want one keystroke away from ANY project, use Vim's own global
+-- marks: mA tags the file, 'A jumps back (A-Z, survive restarts, :marks).
 
--- ---------------------------------------------------------------------
--- Project table.
--- To add a project, add a line here. It shows up in the palette immediately.
---
---   browse = false  ->  opens with Telescope find_files (best for code repos)
---   browse = true   ->  opens with Oil, which also works on EMPTY dirs
---                       (find_files silently shows nothing in a fresh
---                       scratch dir, which looks like a broken keybinding)
--- ---------------------------------------------------------------------
-local projects = {
-  { dir = '/gpfs/projects/rjh/adrian/development/gecko', desc = 'Gecko source', browse = false },
-  -- NOTE: per-thread MADNESS worktrees are intentionally NOT listed here.
-  -- The "Worktree" palette entries (madness-workflow.lua) derive the live
-  -- thread list from `git worktree list`, so new worktrees appear on their own.
-  { dir = '/gpfs/projects/rjh/adrian/repos/madness-workspace', desc = 'Madness workspace (studies/refs/es_bench)', browse = false },
-  { dir = '/gpfs/projects/rjh/adrian/development/madness-worktrees/molecules', desc = 'Molecule library', browse = true },
-  { dir = '/gpfs/scratch/ahurtado/gecko_calcs', desc = 'Scratch calcs (gecko)', browse = true },
-  { dir = '/gpfs/scratch/ahurtado', desc = 'Scratch root (all calc dirs)', browse = true },
-  { dir = '/gpfs/scratch/ahurtado/madness_es_bench', desc = 'ES bench calcs', browse = true },
-  { dir = '/gpfs/projects/rjh/adrian/dalton', desc = 'DALTON source', browse = false },
-  { dir = '/gpfs/scratch/ahurtado/project_data/', desc = 'Project data root', browse = false },
-  { dir = '/gpfs/projects/rjh/adrian/development', desc = 'Development root', browse = false },
-  { dir = '/gpfs/projects/rjh/adrian/development/notes', desc = 'Notes', browse = false },
-}
+-- What makes a directory a project root.
+local ROOT_MARKERS = { '.git', '.obsidian' }
 
--- One config runs on every machine, so keep only the projects that exist
--- here. On a desktop with no /gpfs this leaves the Project category empty
--- instead of full of entries that `cd` into nothing.
-projects = vim.tbl_filter(function(p) return vim.fn.isdirectory(p.dir) == 1 end, projects)
+local VAULT = vim.env.OBSIDIAN_VAULT or vim.fn.expand '~/vaults/research'
+
+--- Project root of a buffer (number) or path (string), or nil.
+local function project_root(src) return vim.fs.root(src, ROOT_MARKERS) end
+
+local function set_project(dir, quiet)
+  if vim.fn.getcwd() == dir then return end
+  vim.cmd('tcd ' .. vim.fn.fnameescape(dir))
+  if not quiet then vim.notify('  ' .. vim.fn.fnamemodify(dir, ':~'), vim.log.levels.INFO) end
+end
+
+-- Follow the file: entering a real file buffer moves the tab to its project.
+vim.api.nvim_create_autocmd('BufEnter', {
+  group = vim.api.nvim_create_augroup('project-root', { clear = true }),
+  callback = function(ev)
+    if vim.bo[ev.buf].buftype ~= '' or vim.api.nvim_buf_get_name(ev.buf) == '' then return end
+    local root = project_root(ev.buf)
+    if root then set_project(root, true) end
+  end,
+})
+
+--- Known projects: the vault, the current one, then recently edited ones.
+local function known_projects()
+  local seen, list = {}, {}
+  local function add(dir)
+    if dir and not seen[dir] and vim.fn.isdirectory(dir) == 1 then
+      seen[dir] = true
+      table.insert(list, dir)
+    end
+  end
+  add(VAULT)
+  add(project_root(0))
+  for _, f in ipairs(vim.v.oldfiles) do
+    if not f:match '^%w+://' then add(project_root(f)) end
+  end
+  return list
+end
+
+local function open_project(dir)
+  set_project(dir)
+  require('telescope.builtin').find_files { cwd = dir, prompt_title = vim.fn.fnamemodify(dir, ':t') }
+end
+
+-- Fuzzy-pick a project, then hand the choice to `action`.
+local function pick_project(prompt, action)
+  local dirs = known_projects()
+  local labels = vim.tbl_map(function(d) return vim.fn.fnamemodify(d, ':~') end, dirs)
+  vim.ui.select(labels, { prompt = prompt }, function(_, idx)
+    if idx then action(dirs[idx]) end
+  end)
+end
 
 -- Claude's memory dir: the markdown files it reads at the start of a session.
 -- (Updated 2026-07-21: was the old -development-madness project dir.)
 local memory_dir = vim.fn.expand '~/.claude/projects/-gpfs-projects-rjh-adrian-repos-madness-workspace/memory'
 local workspace_claude_md = '/gpfs/projects/rjh/adrian/development/CLAUDE.md'
-
-local function open_project(p)
-  vim.cmd('cd ' .. vim.fn.fnameescape(p.dir))
-  vim.notify('  ' .. p.dir, vim.log.levels.INFO)
-  if p.browse then
-    require('oil').open(p.dir)
-  else
-    require('telescope.builtin').find_files { cwd = p.dir, prompt_title = p.desc }
-  end
-end
-
--- Fuzzy-pick a project, then hand the choice to `action`.
-local function pick_project(prompt, action)
-  local labels = {}
-  for _, p in ipairs(projects) do
-    table.insert(labels, p.desc)
-  end
-  vim.ui.select(labels, { prompt = prompt }, function(choice, idx)
-    if not choice then return end
-    action(projects[idx])
-  end)
-end
 
 return {
 
@@ -108,6 +114,7 @@ return {
           local h = require 'harpoon'
           h.ui:toggle_quick_menu(h:list())
         end },
+        { category = 'Marks', name = 'Show global marks', desc = "mA 'A tags", run = function() builtin.marks { mark_type = 'global' } end },
       }
       for i = 1, 4 do
         table.insert(entries, {
@@ -117,49 +124,30 @@ return {
         })
       end
 
-      -- --- One entry per project -----------------------------------------
-      for _, p in ipairs(projects) do
-        table.insert(entries, {
-          category = 'Project',
-          name = 'Open ' .. p.desc,
-          desc = p.dir,
-          run = function() open_project(p) end,
-        })
-      end
+      -- --- Projects ----------------------------------------------------
+      local switch = function() pick_project('Switch project:', open_project) end
+      vim.keymap.set('n', '<leader>sp', switch, { desc = '[S]witch [P]roject' })
 
-      -- --- Cross-project pickers -----------------------------------------
-      if #projects > 0 then vim.list_extend(entries, {
+      vim.list_extend(entries, {
+        { category = 'Project', name = 'Switch project...  (<leader>sp)', desc = 'open choose recent', run = switch },
         {
           category = 'Project',
-          name = 'Open a project...',
-          desc = 'choose pick switch',
-          run = function() pick_project('Open project:', open_project) end,
-        },
-        {
-          category = 'Project',
-          -- Always find_files, even for the Oil-browse projects: this is the
-          -- fast way to reach a calc file under scratch by typing its name.
-          name = 'Find a file in a project...',
-          desc = 'filename search choose',
-          run = function()
-            pick_project('Find files in project:', function(p)
-              vim.cmd('cd ' .. vim.fn.fnameescape(p.dir))
-              builtin.find_files { cwd = p.dir, prompt_title = 'Files: ' .. p.desc }
-            end)
-          end,
+          name = 'Set project to this file',
+          desc = 'cd root here',
+          run = function() set_project(project_root(0) or vim.fn.expand '%:p:h') end,
         },
         {
           category = 'Project',
           name = 'Search in a project...',
           desc = 'grep contents ripgrep choose',
           run = function()
-            pick_project('Search in project:', function(p)
-              vim.cmd('cd ' .. vim.fn.fnameescape(p.dir))
-              builtin.live_grep { cwd = p.dir, prompt_title = 'Search: ' .. p.desc }
+            pick_project('Search in project:', function(dir)
+              set_project(dir)
+              builtin.live_grep { cwd = dir, prompt_title = 'Search: ' .. vim.fn.fnamemodify(dir, ':t') }
             end)
           end,
         },
-      }) end
+      })
 
       -- --- Single files -------------------------------------------------
       vim.list_extend(entries, {
