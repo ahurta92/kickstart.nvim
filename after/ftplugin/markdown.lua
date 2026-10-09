@@ -4,7 +4,7 @@
 vim.opt_local.wrap = true -- Enable soft wrapping
 vim.opt_local.linebreak = true -- Don't break words in the middle
 vim.opt_local.spell = true -- Turn on spellcheck
-vim.opt_local.conceallevel = 2 -- Hide markdown markup (like ** or [link])
+vim.opt_local.conceallevel = 0 -- Show markdown as written; Obsidian does the rendering
 vim.opt_local.scrolloff = 999 -- "Typewriter mode": keeps cursor centered vertically
 
 -- 2. Trigger Zen Mode automatically

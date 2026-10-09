@@ -20,4 +20,11 @@ return {
     ft = 'markdown',
     enabled = true,
   },
+  {
+    'dhruvasagar/vim-table-mode',
+    ft = 'markdown',
+    config = function()
+      vim.g.table_mode_corner = '|' -- standard markdown style
+    end,
+  },
 }
