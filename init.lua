@@ -203,14 +203,9 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 -- vim.keymap.set('n', '<up>', '<cmd>echo "Use k to move!!"<CR>')
 -- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
--- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
---
---  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+-- Split/pane navigation is provided by vim-tmux-navigator
+-- (see lua/custom/plugins/tmux-navigator.lua), which binds <C-h/j/k/l>
+-- to move seamlessly between vim splits and tmux panes.
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -319,6 +314,7 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch', mode = { 'n', 'v' } },
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
+        { '<leader>c', group = '[C]make' },
         { 'gr', group = 'LSP Actions', mode = { 'n' } },
       },
     },
@@ -475,17 +471,9 @@ require('lazy').setup({
       )
 
       -- Shortcut for searching your Neovim configuration files
-<<<<<<< HEAD
       vim.keymap.set('n', '<leader>sn', function() builtin.find_files { cwd = vim.fn.stdpath 'config' } end, { desc = '[S]earch [N]eovim files' })
-=======
-      vim.keymap.set('n', '<leader>sn', function()
-        builtin.find_files { cwd = vim.fn.stdpath 'config' }
-      end, { desc = '[S]earch [N]eovim files' })
       -- Shortcut for searching your Neovim configuration files
-      vim.keymap.set('n', '<leader>sv', function()
-        builtin.find_files { cwd = '~/Documents/Research Notes/' }
-      end, { desc = '[S]earch [V]ault files' })
->>>>>>> b7a2846 (markdown and lint changes)
+      vim.keymap.set('n', '<leader>sv', function() builtin.find_files { cwd = '~/Documents/Research Notes/' } end, { desc = '[S]earch [V]ault files' })
     end,
   },
 
@@ -707,12 +695,8 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
-<<<<<<< HEAD
-        -- python = { "isort", "black" },
-=======
         python = { 'isort', 'black' },
         markdown = { 'markdown' },
->>>>>>> b7a2846 (markdown and lint changes)
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
@@ -820,21 +804,17 @@ require('lazy').setup({
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
     'rebelot/kanagawa.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
-    config = function()
-      require('kanagawa').setup {
-        compile = false,
-        commentStyle = { italic = false },
-        keywordStyle = { italic = false },
-        statementStyle = { bold = true },
-        transparent = false,
-        dimInactive = true, -- dim inactive windows for extra pane-focus clarity
-        terminalColors = true,
-      }
-
-      -- 'kanagawa-dragon' is the darkest variant (~#181616 bg), near-black and modern.
-      -- Other options: 'kanagawa-wave' (classic, slightly lighter) or 'kanagawa-lotus' (light).
-      vim.cmd.colorscheme 'kanagawa-dragon'
-    end,
+    opts = {
+      compile = false,
+      commentStyle = { italic = false },
+      keywordStyle = { italic = false },
+      statementStyle = { bold = true },
+      transparent = false,
+      dimInactive = true, -- dim inactive windows for extra pane-focus clarity
+      terminalColors = true,
+    },
+    -- Active colorscheme is set by auto-gnome-theme based on GNOME light/dark.
+    -- Run `:colorscheme kanagawa-dragon` (or kanagawa-wave / kanagawa-lotus) to switch manually.
   },
 
   -- Highlight todo, notes, etc in comments
@@ -883,18 +863,7 @@ require('lazy').setup({
       --  Check out: https://github.com/nvim-mini/mini.nvim
     end,
   },
-<<<<<<< HEAD
-=======
   { -- Highlight, edit, and navigate code
-    'nvim-treesitter/nvim-treesitter',
-    build = ':TSUpdate',
-    main = 'nvim-treesitter.configs', -- Sets main module to use for opts
-    -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
-    opts = {
-      ensure_installed = { 'bash', 'c', 'cpp', 'diff', 'html', 'lua', 'luadoc', 'query', 'vim', 'vimdoc', 'python', 'latex' },
->>>>>>> b7a2846 (markdown and lint changes)
-
-  {
     'nvim-treesitter/nvim-treesitter',
     lazy = false,
     build = ':TSUpdate',
@@ -902,7 +871,7 @@ require('lazy').setup({
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
       -- ensure basic parser are installed
-      local parsers = { 'bash', 'c', 'cpp', 'python', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local parsers = { 'bash', 'c', 'cpp', 'python', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'latex' }
       require('nvim-treesitter').install(parsers)
 
       ---@param buf integer
