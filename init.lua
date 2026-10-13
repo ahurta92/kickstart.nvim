@@ -164,6 +164,10 @@ vim.o.scrolloff = 10
 -- See `:help 'confirm'`
 vim.o.confirm = true
 
+-- Personal settings that need no plugins: colorscheme, swapfile, filetypes.
+-- Loaded here so they override the kickstart defaults above.
+require 'options'
+
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
@@ -184,7 +188,12 @@ vim.diagnostic.config {
   virtual_lines = false, -- Text shows up underneath the line, with virtual lines
 
   -- Auto open the float, so you can easily read the errors when jumping with `[d` and `]d`
-  jump = { float = true },
+  jump = {
+    on_jump = function(diagnostic, bufnr)
+      if not diagnostic then return end
+      vim.diagnostic.open_float { bufnr = bufnr, scope = 'cursor', focus = false }
+    end,
+  },
 }
 
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
@@ -315,6 +324,7 @@ require('lazy').setup({
         { '<leader>t', group = '[T]oggle' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } }, -- Enable gitsigns recommended keymaps first
         { '<leader>c', group = '[C]make' },
+        { '<leader>o', group = '[O]bsidian' },
         { 'gr', group = 'LSP Actions', mode = { 'n' } },
       },
     },
@@ -380,16 +390,94 @@ require('lazy').setup({
 
       -- [[ Configure Telescope ]]
       -- See `:help telescope` and `:help telescope.setup()`
+      -- ===================================================================
+      -- Searching gitignored files
+      -- ===================================================================
+      -- fd and rg both respect .gitignore out of the box, which meant whole
+      -- categories of writing were invisible to Ctrl+P and Alt+F: the
+      -- superpowers plans and specs under docs/ in the worktrees that
+      -- gitignore docs/, and everything under .claude/. Those are files you
+      -- deliberately do not commit but very much want to find.
+      --
+      -- So: --no-ignore-vcs (stop honouring .gitignore) and --hidden (reach
+      -- dotted directories like .claude), then exclude the junk by hand.
+      -- Without excludes, --hidden turns madness-workspace from 656 files
+      -- into 28,378 -- almost all of it .venv and .git. With them, 794.
+      --
+      -- NOTE: .ignore / .rgignore files are STILL honoured under
+      -- --no-ignore-vcs (verified). That is the escape hatch for per-repo
+      -- noise that does not belong in this global list -- drop a .ignore in
+      -- the repo with e.g. `refs/_dalton_scratch/` and it disappears from
+      -- these pickers while staying in .gitignore.
+      -- Plain directory names, matched at any depth.
+      --
+      -- 'build*' rather than 'build': the madness repo carries build-40core,
+      -- build_amd and build-amd96, and matching only 'build' let 5,400 object
+      -- files back in.
+      local search_excludes = {
+        '.git',
+        '.venv',
+        'venv',
+        'build*', -- build, build_amd, build-40core, build-amd96, ...
+        'node_modules',
+        '__pycache__',
+        '.mypy_cache',
+        '.cache',
+        '.ipynb_checkpoints',
+        '*.egg-info',
+      }
+
+      -- Path-scoped, so a directory merely NAMED worktrees elsewhere survives.
+      -- madness/.claude holds 2,339 files of Claude Code worktree state next
+      -- to 2 actual skills; without this the repo went 2,179 -> 10,334 files.
+      local search_exclude_paths = {
+        fd = { '.claude/worktrees' },
+        rg = { '**/.claude/worktrees/**' },
+      }
+
+      local function fd_find_command()
+        local cmd = { 'fd', '--type', 'f', '--color', 'never', '--hidden', '--no-ignore-vcs' }
+        for _, e in ipairs(search_excludes) do
+          vim.list_extend(cmd, { '--exclude', e })
+        end
+        for _, e in ipairs(search_exclude_paths.fd) do
+          vim.list_extend(cmd, { '--exclude', e })
+        end
+        return cmd
+      end
+
+      local function rg_grep_arguments()
+        local args = {
+          'rg',
+          '--color=never',
+          '--no-heading',
+          '--with-filename',
+          '--line-number',
+          '--column',
+          '--smart-case',
+          '--hidden',
+          '--no-ignore-vcs',
+        }
+        for _, e in ipairs(search_excludes) do
+          vim.list_extend(args, { '--glob', '!' .. e .. '/' })
+        end
+        for _, e in ipairs(search_exclude_paths.rg) do
+          vim.list_extend(args, { '--glob', '!' .. e })
+        end
+        return args
+      end
+
       require('telescope').setup {
-        -- You can put your default mappings / updates / etc. in here
-        --  All the info you're looking for is in `:help telescope.setup()`
-        --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          -- Drives live_grep and grep_string, so Alt+F and every
+          -- "Search in a project/thread" entry inherit this.
+          vimgrep_arguments = rg_grep_arguments(),
+        },
+        pickers = {
+          -- Drives find_files, so Ctrl+P and the project/worktree file
+          -- pickers inherit it.
+          find_files = { find_command = fd_find_command() },
+        },
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
         },
@@ -429,7 +517,8 @@ require('lazy').setup({
 
           -- Jump to the definition of the word under your cursor.
           -- This is where a variable was first declared, or where a function is defined, etc.
-          -- To jump back, press <C-t>.
+          -- To jump back, press <C-o> (jumplist). <C-t> is the workspace
+          -- symbol search, see lua/custom/plugins/vscode-keys.lua.
           vim.keymap.set('n', 'grd', builtin.lsp_definitions, { buffer = buf, desc = '[G]oto [D]efinition' })
 
           -- Fuzzy find all the symbols in your current document.
@@ -472,8 +561,11 @@ require('lazy').setup({
 
       -- Shortcut for searching your Neovim configuration files
       vim.keymap.set('n', '<leader>sn', function() builtin.find_files { cwd = vim.fn.stdpath 'config' } end, { desc = '[S]earch [N]eovim files' })
-      -- Shortcut for searching your Neovim configuration files
-      vim.keymap.set('n', '<leader>sv', function() builtin.find_files { cwd = '~/Documents/Research Notes/' } end, { desc = '[S]earch [V]ault files' })
+
+      -- Shortcut for searching your notes vault
+      vim.keymap.set('n', '<leader>sv', function()
+        builtin.find_files { cwd = vim.env.OBSIDIAN_VAULT or vim.fn.expand '~/vaults/research' }
+      end, { desc = '[S]earch [V]ault files' })
     end,
   },
 
@@ -598,7 +690,12 @@ require('lazy').setup({
       --  See `:help lsp-config` for information about keys and how to configure
       ---@type table<string, vim.lsp.Config>
       local servers = {
-        clangd = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--query-driver=/opt/rocm-6.4.3/lib/llvm/bin/clang++,/opt/rocm-6.4.3/lib/llvm/bin/clang',
+          },
+        },
         pyright = {},
         -- gopls = {},
         -- rust_analyzer = {},
@@ -648,12 +745,31 @@ require('lazy').setup({
       --    :Mason
       --
       -- You can press `g?` for help in this menu.
-      local ensure_installed = vim.tbl_keys(servers or {})
+      -- Mason's clangd has no linux-arm64 build, so on ARM it fails to install
+      -- on every startup. Use the system clangd (apt `clangd`) when present;
+      -- vim.lsp.enable finds it on PATH either way.
+      local ensure_installed = vim.tbl_filter(function(name) return not (name == 'clangd' and vim.fn.executable 'clangd' == 1) end, vim.tbl_keys(servers or {}))
       vim.list_extend(ensure_installed, {
-        -- You can add other tools here that you want Mason to install
+        -- Formatters/linters referenced by conform (formatters_by_ft) and nvim-lint
+        'ruff', -- Python formatter + import sorter; see formatters_by_ft below
+        'mdformat',
+        'markdownlint',
       })
 
-      require('mason-tool-installer').setup { ensure_installed = ensure_installed }
+      -- run_on_start = false is a 72x startup win, not a preference.
+      --
+      -- By default mason-tool-installer checks ensure_installed on every
+      -- launch, and that check refreshes the Mason registry over the network.
+      -- From this cluster that took ~10 SECONDS, every single time, even with
+      -- every tool already installed. Measured: 10,052 ms -> 139 ms of
+      -- startuptime; 10 s -> 0.20 s wall clock.
+      --
+      -- Nothing is lost: install.sh runs :MasonToolsUpdate once at setup, and
+      -- F1 -> "Neovim | Install/update Mason tools" re-runs it on demand.
+      require('mason-tool-installer').setup {
+        ensure_installed = ensure_installed,
+        run_on_start = false,
+      }
 
       for name, server in pairs(servers) do
         vim.lsp.config(name, server)
@@ -694,10 +810,21 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        python = { 'isort', 'black' },
-        markdown = { 'markdown' },
+        markdown = { 'mdformat' },
+
+        -- Conform runs these in order: imports sorted, then formatted.
         --
+        -- ruff rather than black/blackd on purpose. It is one static Rust
+        -- binary — roughly 10ms, no daemon to keep alive, and no Node, which
+        -- matters on a box where the Node-based tools keep breaking. Its
+        -- output is a drop-in match for black, and ruff_organize_imports
+        -- replaces isort.
+        --
+        -- (conform has no `blackd` formatter at all; the daemon would need a
+        -- hand-written entry plus a `blackd` process running on every
+        -- machine, which no compute node would have.)
+        python = { 'ruff_organize_imports', 'ruff_format' },
+
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
@@ -709,6 +836,10 @@ require('lazy').setup({
     event = 'VimEnter',
     version = '1.*',
     dependencies = {
+      -- Bridges Copilot into the completion menu as a source. Needs a Copilot
+      -- provider running; that is lua/custom/plugins/copilot.lua.
+      'fang2hou/blink-copilot',
+
       -- Snippet Engine
       {
         'L3MON4D3/LuaSnip',
@@ -738,28 +869,25 @@ require('lazy').setup({
     ---@type blink.cmp.Config
     opts = {
       keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
+        -- 'super-tab' rather than kickstart's 'default', so <Tab> accepts the
+        -- selected item the way VSCode does. Inside an expanded snippet <Tab>
+        -- still jumps to the next placeholder first, and with no menu open it
+        -- falls through to inserting a real tab.
         --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
+        --   <Tab>            accept  (<S-Tab> jumps back through a snippet)
+        --   <C-n>/<C-p>      next/previous item (also <Down>/<Up>)
+        --   <C-space>        open the menu; again for docs
+        --   <C-e>            dismiss
+        --   <C-k>            toggle signature help
+        --   <C-b>/<C-f>      scroll the docs window
         --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+        -- See :h blink-cmp-config-keymap for defining your own keymap.
+        preset = 'super-tab',
+
+        -- The super-tab preset drops <C-y>, which the default preset used for
+        -- accept. Put it back — it costs nothing and old muscle memory keeps
+        -- working alongside <Tab>.
+        ['<C-y>'] = { 'select_and_accept', 'fallback' },
 
         -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
         --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
@@ -775,10 +903,35 @@ require('lazy').setup({
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
+
+        list = {
+          selection = {
+            preselect = true,
+            -- blink's default inserts each item into the buffer as you arrow
+            -- past it. Off here: Copilot entries are whole multi-line blocks,
+            -- and watching them land and unland while browsing is noise.
+            -- Nothing is written until you accept. VSCode behaves this way too.
+            auto_insert = false,
+          },
+        },
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets' },
+        -- 'buffer' fills the gap where no LSP is attached — plain text,
+        -- markdown, an unconfigured filetype — which previously meant no
+        -- completion menu at all.
+        default = { 'lsp', 'path', 'snippets', 'buffer', 'copilot' },
+        providers = {
+          -- Ranking is left to blink's fuzzy matcher: Copilot competes with
+          -- the LSP on merit rather than being pinned above or below it. To
+          -- bias it, add score_offset -- positive floats Copilot up, negative
+          -- sinks it below real LSP results.
+          copilot = {
+            name = 'copilot',
+            module = 'blink-copilot',
+            async = true,
+          },
+        },
       },
 
       snippets = { preset = 'luasnip' },

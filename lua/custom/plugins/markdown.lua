@@ -5,12 +5,12 @@ return {
     enabled = false,
     ft = 'markdown', -- Lazy loads the plugin only for .md files
     opts = {
-      window = { width = 0.70 }, -- Adjust to match your screen size
+      window = { width = 0.90 }, -- Adjust to match your screen size
       plugins = {
         options = {
           laststatus = 0, -- Hides status line
           number = false, -- Hides line numbers
-          cursorline = false,
+          cursorline = True,
         },
       },
     },
@@ -18,6 +18,6 @@ return {
   {
     'folke/twilight.nvim', -- Optional: dims unselected paragraphs
     ft = 'markdown',
-    enabled = false,
+    enabled = true,
   },
 }
