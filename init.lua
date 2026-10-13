@@ -950,25 +950,8 @@ require('lazy').setup({
     },
   },
 
-  { -- You can easily change to a different colorscheme.
-    -- Change the name of the colorscheme plugin below, and then
-    -- change the command in the config to whatever the name of that colorscheme is.
-    --
-    -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'rebelot/kanagawa.nvim',
-    priority = 1000, -- Make sure to load this before all the other start plugins.
-    opts = {
-      compile = false,
-      commentStyle = { italic = false },
-      keywordStyle = { italic = false },
-      statementStyle = { bold = true },
-      transparent = false,
-      dimInactive = true, -- dim inactive windows for extra pane-focus clarity
-      terminalColors = true,
-    },
-    -- Active colorscheme is set by auto-gnome-theme based on GNOME light/dark.
-    -- Run `:colorscheme kanagawa-dragon` (or kanagawa-wave / kanagawa-lotus) to switch manually.
-  },
+  -- No colorscheme plugin here: lua/custom/plugins/auto-gnome-theme.lua loads
+  -- adwaita (light) and rose-pine (dark) and follows the GNOME setting.
 
   -- Highlight todo, notes, etc in comments
   {
