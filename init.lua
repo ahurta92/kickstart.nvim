@@ -1002,11 +1002,33 @@ require('lazy').setup({
       require('mini.ai').setup { n_lines = 500 }
 
       -- Add/delete/replace surroundings (brackets, quotes, etc.)
+      -- On gs, because plain s belongs to flash.nvim (custom/plugins/flash.lua).
       --
-      -- - saiw) - [S]urround [A]dd [I]nner [W]ord [)]Paren
-      -- - sd'   - [S]urround [D]elete [']quotes
-      -- - sr)'  - [S]urround [R]eplace [)] [']
-      require('mini.surround').setup()
+      -- - gsaiw) - [S]urround [A]dd [I]nner [W]ord [)]Paren
+      -- - gsd'   - [S]urround [D]elete [']quotes
+      -- - gsr)'  - [S]urround [R]eplace [)] [']
+      require('mini.surround').setup {
+        mappings = {
+          add = 'gsa',
+          delete = 'gsd',
+          find = 'gsf',
+          find_left = 'gsF',
+          highlight = 'gsh',
+          replace = 'gsr',
+          update_n_lines = 'gsn',
+        },
+      }
+
+      -- One guide, for the block the cursor is in; no guides elsewhere.
+      -- ii / ai select that scope, [i / ]i jump to its edges.
+      require('mini.indentscope').setup {
+        symbol = '│',
+        draw = { delay = 0, animation = require('mini.indentscope').gen_animation.none() },
+      }
+      -- Skip help, terminals, pickers and other non-file buffers.
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'TermOpen' }, {
+        callback = function(ev) vim.b[ev.buf].miniindentscope_disable = vim.bo[ev.buf].buftype ~= '' end,
+      })
 
       -- Simple and easy statusline.
       --  You could remove this setup call if you don't like it,
@@ -1094,7 +1116,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommended keymaps
   require 'kickstart.plugins.debug',
-  require 'kickstart.plugins.indent_line',
+  -- require 'kickstart.plugins.indent_line', -- replaced by mini.indentscope (cursor's scope only)
   --require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
